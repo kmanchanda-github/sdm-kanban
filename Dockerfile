@@ -8,12 +8,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 COPY templates/ templates/
 COPY static/ static/
+COPY allowed_users.json /app/data/allowed_users.json
 
 RUN mkdir -p /app/data
 
 ENV PYTHONUNBUFFERED=1
 ENV PORT=9999
 ENV DATA_DIR=/app/data
+ENV SECRET_KEY=""
 
 EXPOSE 9999
 

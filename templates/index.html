@@ -23,8 +23,10 @@
         <span class="header-tagline">⚡ Escalation Radar</span>
     </div>
     <div class="header-actions">
+        <span class="header-user">{{ current_user }}</span>
         <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ New Card</button>
         <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()">☀ Light</button>
+        <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">Logout</a>
     </div>
 </header>
 

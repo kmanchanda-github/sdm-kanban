@@ -101,6 +101,16 @@ body {
     text-transform: uppercase;
 }
 
+.header-user {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.2rem 0.65rem;
+    font-weight: 500;
+}
+
 .header-actions {
     display: flex;
     align-items: center;
