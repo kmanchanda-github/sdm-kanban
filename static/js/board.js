@@ -90,6 +90,7 @@ function renderBoard() {
     }
 
     initSortable();
+    if (_searchQuery) applySearch();
 }
 
 function buildCardEl(card, bucket, rank) {
@@ -110,6 +111,13 @@ function buildCardEl(card, bucket, rank) {
         badge.className = 'priority-badge';
         badge.textContent = `#${rank}`;
         meta.appendChild(badge);
+    }
+
+    if (card.created_by) {
+        const cb = document.createElement('span');
+        cb.className = 'created-by-badge';
+        cb.textContent = card.created_by;
+        meta.appendChild(cb);
     }
 
     if (bucket === 'shared-progress' && card.cec_ids && card.cec_ids.length > 0) {
@@ -262,7 +270,9 @@ function openCardModal(cardId) {
         </div>
         ${isShared ? renderCecSection(card) : ''}
         <div class="card-timestamps">
-            Created: ${fmtDate(card.created_at)} &nbsp;·&nbsp; Updated: ${fmtDate(card.updated_at)}
+            Created by: <strong>${escHtml(card.created_by || 'kamancha')}</strong>
+            &nbsp;·&nbsp; ${fmtDate(card.created_at)}
+            &nbsp;·&nbsp; Updated: ${fmtDate(card.updated_at)}
         </div>
         <div class="form-actions">
             <button class="btn btn-danger btn-sm" onclick="deleteCard('${card.id}')">Delete</button>
@@ -384,6 +394,60 @@ function fmtDate(iso) {
     } catch { return iso; }
 }
 
+// ── Search ───────────────────────────────────────────────────────────────
+let _searchQuery = '';
+
+function handleSearch(val) {
+    _searchQuery = val.trim().toLowerCase();
+    document.getElementById('search-clear').style.display = _searchQuery ? 'block' : 'none';
+    applySearch();
+}
+
+function clearSearch() {
+    _searchQuery = '';
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-clear').style.display = 'none';
+    applySearch();
+}
+
+function applySearch() {
+    const cards = document.querySelectorAll('.kanban-card');
+    let matchCount = 0;
+
+    cards.forEach(el => {
+        if (!_searchQuery) {
+            el.classList.remove('search-hidden', 'search-match');
+            matchCount++;
+            return;
+        }
+        const card = cardById(el.dataset.id);
+        if (!card) return;
+        const haystack = [
+            card.title,
+            card.description,
+            card.created_by,
+            ...(card.cec_ids || []),
+        ].join(' ').toLowerCase();
+
+        if (haystack.includes(_searchQuery)) {
+            el.classList.remove('search-hidden');
+            el.classList.add('search-match');
+            matchCount++;
+        } else {
+            el.classList.add('search-hidden');
+            el.classList.remove('search-match');
+        }
+    });
+
+    // Update search result count in input placeholder
+    const input = document.getElementById('search-input');
+    if (_searchQuery) {
+        input.title = `${matchCount} match${matchCount !== 1 ? 'es' : ''}`;
+    } else {
+        input.title = '';
+    }
+}
+
 // ── Keyboard shortcuts ───────────────────────────────────────────────────
 document.addEventListener('keydown', (e) => {
     const tag = document.activeElement?.tagName?.toLowerCase();
@@ -395,6 +459,10 @@ document.addEventListener('keydown', (e) => {
     if (!inInput && e.key === 'n') {
         e.preventDefault();
         openAddModal();
+    }
+    if (!inInput && e.key === '/') {
+        e.preventDefault();
+        document.getElementById('search-input')?.focus();
     }
 });
 

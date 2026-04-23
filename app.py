@@ -157,11 +157,23 @@ def _renumber_ideas(cards):
 
 # ── Board route ──────────────────────────────────────────────────────────
 
+def _migrate_cards(data):
+    changed = False
+    for card in data['cards']:
+        if 'created_by' not in card:
+            card['created_by'] = 'kamancha'
+            changed = True
+    if changed:
+        _save_cards(data)
+    return data
+
+
 @app.route('/')
 @login_required
 def index():
     with _lock:
         data = _load_cards()
+        data = _migrate_cards(data)
     buckets = {b: [] for b in VALID_BUCKETS}
     for card in data['cards']:
         b = card.get('bucket', 'ideas')
@@ -208,6 +220,7 @@ def create_card():
             'bucket': bucket,
             'priority': 999,
             'cec_ids': [],
+            'created_by': session.get('cec_id', 'unknown'),
             'created_at': _now(),
             'updated_at': _now(),
         }
@@ -239,6 +252,7 @@ def quick_add():
             'bucket': 'ideas',
             'priority': 0,
             'cec_ids': [],
+            'created_by': session.get('cec_id', 'unknown'),
             'created_at': _now(),
             'updated_at': _now(),
         }
