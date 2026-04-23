@@ -1,3 +1,5 @@
+version: '2'
+
 services:
   sdm-kanban:
     build: .
@@ -10,14 +12,6 @@ services:
       - DATA_DIR=/app/data
     volumes:
       - kanban-data:/app/data
-    networks:
-      - kanban-network
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9999/api/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
     logging:
       driver: "json-file"
       options:
@@ -26,9 +20,3 @@ services:
 
 volumes:
   kanban-data:
-    name: sdm-kanban-data
-
-networks:
-  kanban-network:
-    name: sdm-kanban-network
-    driver: bridge
