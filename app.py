@@ -149,9 +149,9 @@ def _save_cards(data):
         json.dump(data, f, indent=2)
 
 
-def _renumber_ideas(cards):
-    ideas = sorted([c for c in cards if c['bucket'] == 'ideas'], key=lambda c: c.get('priority', 999))
-    for i, card in enumerate(ideas):
+def _renumber_bucket(cards, bucket):
+    subset = sorted([c for c in cards if c['bucket'] == bucket], key=lambda c: c.get('priority', 999))
+    for i, card in enumerate(subset):
         card['priority'] = i
 
 
@@ -162,6 +162,16 @@ def _migrate_cards(data):
     for card in data['cards']:
         if 'created_by' not in card:
             card['created_by'] = 'kamancha'
+            changed = True
+    # Assign sequential priorities per bucket for any cards still at sentinel 999
+    buckets_needing_fix = {}
+    for card in data['cards']:
+        if card.get('priority', 999) == 999:
+            buckets_needing_fix.setdefault(card['bucket'], []).append(card)
+    for bucket, cards in buckets_needing_fix.items():
+        max_p = max((c.get('priority', 0) for c in data['cards'] if c['bucket'] == bucket and c.get('priority', 999) != 999), default=-1)
+        for i, card in enumerate(cards):
+            card['priority'] = max_p + 1 + i
             changed = True
     if changed:
         _save_cards(data)
@@ -179,7 +189,8 @@ def index():
         b = card.get('bucket', 'ideas')
         if b in buckets:
             buckets[b].append(card)
-    buckets['ideas'].sort(key=lambda c: c.get('priority', 999))
+    for b in VALID_BUCKETS:
+        buckets[b].sort(key=lambda c: c.get('priority', 999))
     return render_template('index.html', buckets=buckets,
                            cards_json=json.dumps(data['cards']),
                            current_user=session['cec_id'])
@@ -224,13 +235,9 @@ def create_card():
             'created_at': _now(),
             'updated_at': _now(),
         }
+        existing = [c for c in data['cards'] if c['bucket'] == bucket]
+        card['priority'] = len(existing)
         data['cards'].append(card)
-        if bucket == 'ideas':
-            for c in data['cards']:
-                if c['bucket'] == 'ideas' and c['id'] != card['id']:
-                    c['priority'] += 1
-            card['priority'] = 0
-            _renumber_ideas(data['cards'])
         _save_cards(data)
     return jsonify({'status': 'ok', 'card': card}), 201
 
@@ -245,20 +252,18 @@ def quick_add():
 
     with _lock:
         data = _load_cards()
+        existing = [c for c in data['cards'] if c['bucket'] == 'ideas']
         card = {
             'id': _generate_id(),
             'title': title[:200],
             'description': (body.get('description') or '').strip(),
             'bucket': 'ideas',
-            'priority': 0,
+            'priority': len(existing),
             'cec_ids': [],
             'created_by': session.get('cec_id', 'unknown'),
             'created_at': _now(),
             'updated_at': _now(),
         }
-        for c in data['cards']:
-            if c['bucket'] == 'ideas':
-                c['priority'] += 1
         data['cards'].append(card)
         _save_cards(data)
     return jsonify({'status': 'ok', 'card': card}), 201
@@ -325,8 +330,7 @@ def delete_card(card_id):
             return jsonify({'error': 'not found'}), 404
         bucket = data['cards'][idx]['bucket']
         data['cards'].pop(idx)
-        if bucket == 'ideas':
-            _renumber_ideas(data['cards'])
+        _renumber_bucket(data['cards'], bucket)
         _save_cards(data)
     return jsonify({'status': 'ok'})
 
@@ -345,17 +349,16 @@ def move_card(card_id):
         if not card:
             return jsonify({'error': 'not found'}), 404
         old_bucket = card['bucket']
-        card['bucket'] = new_bucket
-        card['updated_at'] = _now()
         if old_bucket != new_bucket:
+            card['bucket'] = new_bucket
+            card['updated_at'] = _now()
             if new_bucket != 'shared-progress':
                 card['cec_ids'] = []
-            if new_bucket == 'ideas':
-                card['priority'] = max((c.get('priority', 0) for c in data['cards'] if c['bucket'] == 'ideas'), default=-1) + 1
-            else:
-                card['priority'] = 999
-            if old_bucket == 'ideas':
-                _renumber_ideas(data['cards'])
+            # place at bottom of destination bucket
+            dest_count = sum(1 for c in data['cards'] if c['bucket'] == new_bucket and c['id'] != card['id'])
+            card['priority'] = dest_count
+            # renumber the bucket the card left
+            _renumber_bucket(data['cards'], old_bucket)
         _save_cards(data)
     return jsonify({'status': 'ok', 'card': card})
 

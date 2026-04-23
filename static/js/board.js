@@ -74,7 +74,9 @@ function renderBoard() {
         const b = card.bucket || 'ideas';
         if (buckets[b]) buckets[b].push(card);
     }
-    buckets['ideas'].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+    for (const b of Object.keys(buckets)) {
+        buckets[b].sort((a, c) => (a.priority ?? 999) - (c.priority ?? 999));
+    }
 
     for (const [bucket, cards] of Object.entries(buckets)) {
         const list = document.getElementById(`list-${bucket}`);
@@ -170,9 +172,8 @@ async function handleSortEnd(evt) {
     if (!fromBucket || !toBucket) return;
 
     if (fromBucket === toBucket) {
-        if (fromBucket !== 'ideas') return; // reorder only matters in Ideas
-        const ideasList = document.getElementById('list-ideas');
-        const cardIds = [...ideasList.querySelectorAll('.kanban-card')].map(el => el.dataset.id);
+        const list = document.getElementById(`list-${fromBucket}`);
+        const cardIds = [...list.querySelectorAll('.kanban-card')].map(el => el.dataset.id);
         try {
             await apiFetch('/api/cards/reorder-bulk', 'POST', { card_ids: cardIds });
             cardIds.forEach((id, i) => {
