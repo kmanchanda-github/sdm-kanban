@@ -54,6 +54,7 @@ body {
     top: 0;
     z-index: 100;
     box-shadow: var(--shadow);
+    position: relative;
 }
 
 .app-logo {
@@ -83,6 +84,21 @@ body {
     color: var(--text-secondary);
     font-weight: 400;
     display: block;
+}
+
+.header-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.header-tagline {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .header-actions {
@@ -467,6 +483,20 @@ label {
 .toast.success { border-left: 3px solid var(--accent-success); }
 .toast.error { border-left: 3px solid var(--accent-danger); }
 @keyframes toastIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ── Credit Footer ──────────────────────────────────────────────────────── */
+.credit-footer {
+    text-align: center;
+    padding: 0.65rem 1rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+}
+
+.credit-footer strong {
+    color: var(--text-primary);
+}
 
 /* ── API Usage collapsible ──────────────────────────────────────────────── */
 .api-footer {
