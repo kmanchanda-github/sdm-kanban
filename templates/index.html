@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDM Kanban Board</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<!-- Header -->
+<header class="app-header">
+    <div class="app-logo">
+        <div class="logo-icon">K</div>
+        <div>
+            <span>SDM Kanban</span>
+            <span class="header-subtitle">Escalation Team Board</span>
+        </div>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ New Card</button>
+        <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()">☀ Light</button>
+    </div>
+</header>
+
+<!-- Board -->
+<div class="board-container">
+    {% for bucket_id, bucket_label in [
+        ('ideas', 'Ideas'),
+        ('in-progress', 'In Progress'),
+        ('shared-progress', 'Shared Progress'),
+        ('complete', 'Complete')
+    ] %}
+    <div class="board-column" data-bucket="{{ bucket_id }}">
+        <div class="column-header">
+            <h2>{{ bucket_label }}</h2>
+            <span class="card-count" id="count-{{ bucket_id }}">{{ buckets[bucket_id]|length }}</span>
+        </div>
+        <div class="column-body">
+            <div class="card-list" id="list-{{ bucket_id }}" data-bucket="{{ bucket_id }}">
+                {% if buckets[bucket_id]|length == 0 %}
+                <div class="empty-hint">Drop cards here</div>
+                {% endif %}
+                {% for card in buckets[bucket_id] %}
+                <div class="kanban-card" data-id="{{ card.id }}">
+                    <div class="card-title-text">{{ card.title }}</div>
+                    <div class="card-meta">
+                        {% if bucket_id == 'ideas' %}
+                        <span class="priority-badge">#{{ loop.index }}</span>
+                        {% endif %}
+                        {% if bucket_id == 'shared-progress' and card.cec_ids %}
+                        <div class="cec-badges">
+                            {% for cec in card.cec_ids %}
+                            <span class="cec-badge">{{ cec }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- API Usage Footer -->
+<footer class="api-footer">
+    <details>
+        <summary>Quick Add via API / CLI</summary>
+        <pre>
+# Add a card from the terminal (goes to top of Ideas)
+curl -s -X POST http://localhost:9999/api/cards/quick \
+  -H 'Content-Type: application/json' \
+  -d '{"title": "Your idea here", "description": "Optional details"}'
+
+# Shell alias — add to ~/.zshrc
+kanban-add() { curl -s -X POST http://localhost:9999/api/cards/quick \
+  -H 'Content-Type: application/json' -d "{\"title\": \"$*\"}" | python3 -m json.tool; }
+        </pre>
+    </details>
+</footer>
+
+<!-- Add Card Modal -->
+<div id="add-modal" class="modal-backdrop" style="display:none">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeAddModal()">×</button>
+        <h3>New Idea</h3>
+        <form id="add-card-form" onsubmit="submitNewCard(event)">
+            <div class="form-group">
+                <label for="new-title">Title</label>
+                <input type="text" id="new-title" class="form-input" required maxlength="200"
+                       placeholder="Short description of the idea...">
+            </div>
+            <div class="form-group">
+                <label for="new-desc">Description</label>
+                <textarea id="new-desc" class="form-textarea" rows="4"
+                          placeholder="Details, context, SR numbers, links..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add to Ideas</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Card Detail Modal -->
+<div id="card-modal" class="modal-backdrop" style="display:none">
+    <div class="modal-box">
+        <!-- Populated dynamically by board.js -->
+    </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- SortableJS -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<!-- Initial data from Flask -->
+<script>
+    window.INITIAL_CARDS = {{ cards_json|safe }};
+    // Attach click handlers after initial server render
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.kanban-card').forEach(el => {
+            el.addEventListener('click', () => openCardModal(el.dataset.id));
+        });
+    });
+</script>
+<script src="{{ url_for('static', filename='js/board.js') }}"></script>
+</body>
+</html>
