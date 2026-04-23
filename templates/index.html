@@ -22,7 +22,9 @@
     <div class="header-center">
         <span class="header-tagline">⚡ Escalation Radar</span>
         <div class="search-wrap">
-            <input type="text" id="search-input" class="search-input" placeholder="Search title, description, CEC-ID…" oninput="handleSearch(this.value)">
+            <span class="search-icon">⌕</span>
+            <input type="text" id="search-input" class="search-input" placeholder="Search cards, CEC-IDs…" oninput="handleSearch(this.value)">
+            <span class="search-results-badge" id="search-badge" style="display:none"></span>
             <button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none">×</button>
         </div>
     </div>

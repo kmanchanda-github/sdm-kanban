@@ -113,12 +113,11 @@ function buildCardEl(card, bucket, rank) {
         meta.appendChild(badge);
     }
 
-    if (card.created_by) {
-        const cb = document.createElement('span');
-        cb.className = 'created-by-badge';
-        cb.textContent = card.created_by;
-        meta.appendChild(cb);
-    }
+    const createdBy = card.created_by || 'kamancha';
+    const cb = document.createElement('span');
+    cb.className = 'created-by-badge';
+    cb.textContent = createdBy;
+    meta.appendChild(cb);
 
     if (bucket === 'shared-progress' && card.cec_ids && card.cec_ids.length > 0) {
         const cecWrap = document.createElement('div');
@@ -411,10 +410,11 @@ function clearSearch() {
 }
 
 function applySearch() {
-    const cards = document.querySelectorAll('.kanban-card');
+    const cardEls = document.querySelectorAll('.kanban-card');
     let matchCount = 0;
+    const total = cardEls.length;
 
-    cards.forEach(el => {
+    cardEls.forEach(el => {
         if (!_searchQuery) {
             el.classList.remove('search-hidden', 'search-match');
             matchCount++;
@@ -424,8 +424,8 @@ function applySearch() {
         if (!card) return;
         const haystack = [
             card.title,
-            card.description,
-            card.created_by,
+            card.description || '',
+            card.created_by || '',
             ...(card.cec_ids || []),
         ].join(' ').toLowerCase();
 
@@ -439,12 +439,15 @@ function applySearch() {
         }
     });
 
-    // Update search result count in input placeholder
-    const input = document.getElementById('search-input');
+    const badge = document.getElementById('search-badge');
+    const clearBtn = document.getElementById('search-clear');
     if (_searchQuery) {
-        input.title = `${matchCount} match${matchCount !== 1 ? 'es' : ''}`;
+        badge.textContent = `${matchCount}/${total}`;
+        badge.style.display = 'inline';
+        clearBtn.style.display = 'inline';
     } else {
-        input.title = '';
+        badge.style.display = 'none';
+        clearBtn.style.display = 'none';
     }
 }
 
