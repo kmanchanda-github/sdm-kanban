@@ -43,9 +43,6 @@
         </div>
         <div class="column-body">
             <div class="card-list" id="list-{{ bucket_id }}" data-bucket="{{ bucket_id }}">
-                {% if buckets[bucket_id]|length == 0 %}
-                <div class="empty-hint">Drop cards here</div>
-                {% endif %}
                 {% for card in buckets[bucket_id] %}
                 <div class="kanban-card" data-id="{{ card.id }}">
                     <div class="card-title-text">{{ card.title }}</div>

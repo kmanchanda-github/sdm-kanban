@@ -84,13 +84,6 @@ function renderBoard() {
         list.innerHTML = '';
         if (countEl) countEl.textContent = cards.length;
 
-        if (cards.length === 0) {
-            const hint = document.createElement('div');
-            hint.className = 'empty-hint';
-            hint.textContent = 'Drop cards here';
-            list.appendChild(hint);
-        }
-
         for (let i = 0; i < cards.length; i++) {
             list.appendChild(buildCardEl(cards[i], bucket, i + 1));
         }
@@ -149,13 +142,11 @@ function initSortable() {
         if (!list) continue;
 
         const s = Sortable.create(list, {
-            group: 'kanban',
-            sort: bucket === 'ideas',
+            group: { name: 'kanban', pull: true, put: true },
+            sort: true,
             animation: 150,
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
-            dragClass: 'sortable-drag',
-            filter: '.empty-hint',
             onEnd: handleSortEnd,
         });
         _sortables.push(s);
@@ -169,13 +160,14 @@ async function handleSortEnd(evt) {
     const fromBucket = evt.from.dataset.bucket;
     const toBucket = evt.to.dataset.bucket;
 
-    if (fromBucket === toBucket && fromBucket === 'ideas') {
-        // Reorder within ideas
+    if (!fromBucket || !toBucket) return;
+
+    if (fromBucket === toBucket) {
+        if (fromBucket !== 'ideas') return; // reorder only matters in Ideas
         const ideasList = document.getElementById('list-ideas');
         const cardIds = [...ideasList.querySelectorAll('.kanban-card')].map(el => el.dataset.id);
         try {
             await apiFetch('/api/cards/reorder-bulk', 'POST', { card_ids: cardIds });
-            // Update local priority
             cardIds.forEach((id, i) => {
                 const c = cardById(id);
                 if (c) c.priority = i;
@@ -188,19 +180,18 @@ async function handleSortEnd(evt) {
         return;
     }
 
-    if (fromBucket !== toBucket) {
-        try {
-            const result = await apiFetch(`/api/cards/${cardId}/move`, 'PUT', { bucket: toBucket });
-            updateLocalCard(result.card);
-            renderBoard();
-            if (toBucket === 'shared-progress') {
-                // Auto-open modal to add CEC-IDs
-                openCardModal(cardId);
-            }
-        } catch (e) {
-            toast(`Move failed: ${e.message}`, 'error');
-            renderBoard();
+    // Cross-column move
+    try {
+        const result = await apiFetch(`/api/cards/${cardId}/move`, 'PUT', { bucket: toBucket });
+        updateLocalCard(result.card);
+        renderBoard();
+        if (toBucket === 'shared-progress') {
+            openCardModal(cardId);
         }
+        toast(`Moved to ${BUCKET_LABELS[toBucket]}`);
+    } catch (e) {
+        toast(`Move failed: ${e.message}`, 'error');
+        renderBoard();
     }
 }
 
