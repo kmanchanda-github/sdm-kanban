@@ -59,6 +59,7 @@
                         <span class="priority-badge">#{{ loop.index }}</span>
                         {% endif %}
                         <span class="created-by-badge">{{ card.created_by or 'kamancha' }}</span>
+                        <span class="bucket-date-badge">{{ (card.bucket_entered_at or card.created_at or '')[:10] }}</span>
                         {% if bucket_id == 'shared-progress' and card.cec_ids %}
                         <div class="cec-badges">
                             {% for cec in card.cec_ids %}

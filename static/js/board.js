@@ -121,6 +121,11 @@ function buildCardEl(card, bucket, rank) {
     cb.textContent = createdBy;
     meta.appendChild(cb);
 
+    const dateEl = document.createElement('span');
+    dateEl.className = 'bucket-date-badge';
+    dateEl.textContent = fmtDateShort(card.bucket_entered_at || card.created_at);
+    meta.appendChild(dateEl);
+
     if (bucket === 'shared-progress' && card.cec_ids && card.cec_ids.length > 0) {
         const cecWrap = document.createElement('div');
         cecWrap.className = 'cec-badges';
@@ -192,6 +197,18 @@ async function handleSortEnd(evt) {
     try {
         const result = await apiFetch(`/api/cards/${cardId}/move`, 'PUT', { bucket: toBucket });
         updateLocalCard(result.card);
+
+        // Save the visual drop position in the destination column
+        const destList = document.getElementById(`list-${toBucket}`);
+        const destIds = [...destList.querySelectorAll('.kanban-card')].map(el => el.dataset.id);
+        if (destIds.length > 1) {
+            await apiFetch('/api/cards/reorder-bulk', 'POST', { card_ids: destIds });
+            destIds.forEach((id, i) => {
+                const c = cardById(id);
+                if (c) c.priority = i;
+            });
+        }
+
         renderBoard();
         if (toBucket === 'shared-progress') {
             openCardModal(cardId);
@@ -271,8 +288,9 @@ function openCardModal(cardId) {
         ${isShared ? renderCecSection(card) : ''}
         <div class="card-timestamps">
             Created by: <strong>${escHtml(card.created_by || 'kamancha')}</strong>
-            &nbsp;·&nbsp; ${fmtDate(card.created_at)}
-            &nbsp;·&nbsp; Updated: ${fmtDate(card.updated_at)}
+            &nbsp;·&nbsp; Created: ${fmtDate(card.created_at)}
+            &nbsp;·&nbsp; In bucket since: ${fmtDate(card.bucket_entered_at || card.created_at)}
+            ${card.completed_at ? `&nbsp;·&nbsp; <span style="color:var(--accent-success)">✓ Completed: ${fmtDate(card.completed_at)}</span>` : ''}
         </div>
         <div class="form-actions">
             <button class="btn btn-danger btn-sm" onclick="deleteCard('${card.id}')">Delete</button>
@@ -391,6 +409,13 @@ function fmtDate(iso) {
     if (!iso) return '—';
     try {
         return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch { return iso; }
+}
+
+function fmtDateShort(iso) {
+    if (!iso) return '';
+    try {
+        return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
     } catch { return iso; }
 }
 

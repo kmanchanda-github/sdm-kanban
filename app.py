@@ -163,6 +163,12 @@ def _migrate_cards(data):
         if 'created_by' not in card:
             card['created_by'] = 'kamancha'
             changed = True
+        if 'completed_at' not in card:
+            card['completed_at'] = card.get('updated_at') if card.get('bucket') == 'complete' else None
+            changed = True
+        if 'bucket_entered_at' not in card:
+            card['bucket_entered_at'] = card.get('created_at', _now())
+            changed = True
     # Assign sequential priorities per bucket for any cards still at sentinel 999
     buckets_needing_fix = {}
     for card in data['cards']:
@@ -224,6 +230,7 @@ def create_card():
 
     with _lock:
         data = _load_cards()
+        now = _now()
         card = {
             'id': _generate_id(),
             'title': title[:200],
@@ -232,8 +239,10 @@ def create_card():
             'priority': 999,
             'cec_ids': [],
             'created_by': session.get('cec_id', 'unknown'),
-            'created_at': _now(),
-            'updated_at': _now(),
+            'created_at': now,
+            'updated_at': now,
+            'bucket_entered_at': now,
+            'completed_at': None,
         }
         existing = [c for c in data['cards'] if c['bucket'] == bucket]
         card['priority'] = len(existing)
@@ -253,6 +262,7 @@ def quick_add():
     with _lock:
         data = _load_cards()
         existing = [c for c in data['cards'] if c['bucket'] == 'ideas']
+        now = _now()
         card = {
             'id': _generate_id(),
             'title': title[:200],
@@ -261,8 +271,10 @@ def quick_add():
             'priority': len(existing),
             'cec_ids': [],
             'created_by': session.get('cec_id', 'unknown'),
-            'created_at': _now(),
-            'updated_at': _now(),
+            'created_at': now,
+            'updated_at': now,
+            'bucket_entered_at': now,
+            'completed_at': None,
         }
         data['cards'].append(card)
         _save_cards(data)
@@ -350,10 +362,17 @@ def move_card(card_id):
             return jsonify({'error': 'not found'}), 404
         old_bucket = card['bucket']
         if old_bucket != new_bucket:
+            now = _now()
             card['bucket'] = new_bucket
-            card['updated_at'] = _now()
+            card['updated_at'] = now
+            card['bucket_entered_at'] = now
             if new_bucket != 'shared-progress':
                 card['cec_ids'] = []
+            # completed_at: set when entering complete, clear when leaving
+            if new_bucket == 'complete':
+                card['completed_at'] = now
+            elif old_bucket == 'complete':
+                card['completed_at'] = None
             # place at bottom of destination bucket
             dest_count = sum(1 for c in data['cards'] if c['bucket'] == new_bucket and c['id'] != card['id'])
             card['priority'] = dest_count

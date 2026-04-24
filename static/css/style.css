@@ -349,6 +349,7 @@ body {
     align-items: center;
     gap: 0.4rem;
     flex-wrap: wrap;
+    justify-content: space-between;
 }
 
 .priority-badge {
@@ -369,6 +370,14 @@ body {
     background: transparent;
     padding: 0.1rem 0;
     display: inline-block;
+}
+
+.bucket-date-badge {
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-left: auto;
+    white-space: nowrap;
 }
 
 .cec-badges {
